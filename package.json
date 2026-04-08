@@ -1,0 +1,16 @@
+{
+  "name": "retail-shopping-app-monorepo",
+  "private": true,
+  "workspaces": [
+    "bff",
+    "mobile"
+  ],
+  "scripts": {
+    "build": "npm run build -w bff",
+    "test": "npm run test -w bff && npm run test -w mobile"
+  },
+  "dependencies": {
+    "react-native": "^0.76.9",
+    "react-native-screens": "^4.4.0"
+  }
+}
