@@ -7,3 +7,4 @@ ios/build
 android/build
 .env
 *.log
+.idea/*

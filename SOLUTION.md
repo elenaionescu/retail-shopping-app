@@ -194,3 +194,133 @@ The mobile tests focus on user-visible behaviour:
 - No external payment provider is used.
 - Product stock levels mutate during runtime as checkouts succeed.
 - Because storage is in-memory, restarting the BFF resets products, discounts, and carts to their seed state.
+
+## Architecture Diagram
+
+### System Overview
+
+```text
+┌─────────────────────────────┐
+│       Mobile App (Expo)     │
+│─────────────────────────────│
+│ • Product List UI           │
+│ • Product Detail            │
+│ • Cart / Checkout Screens   │
+│ • Local state (cartId)      │
+└──────────────┬──────────────┘
+               │ HTTP (REST)
+               ▼
+┌─────────────────────────────┐
+│        BFF (NestJS)         │
+│─────────────────────────────│
+│ • Cart Controller           │
+│ • Product Controller        │
+│ • Pricing & Discounts       │
+│ • Stock Validation          │
+│ • Session Expiry Logic      │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│     In-Memory Data Store    │
+│─────────────────────────────│
+│ • Products                  │
+│ • Cart Sessions             │
+│ • Reservations              │
+└─────────────────────────────┘
+```
+
+---
+
+### Cart Lifecycle Flow
+
+```text
+User taps "Add to Cart"
+        │
+        ▼
+ensureCart()
+        │
+        ├── Existing cart valid → reuse
+        │
+        └── Cart missing/expired
+              │
+              ▼
+        POST /cart/sessions
+              │
+              ▼
+        New cart created
+              │
+              ▼
+POST /cart/:cartId/items
+        │
+        ▼
+Backend:
+  • validate stock
+  • update cart
+  • recalculate totals
+        │
+        ▼
+Return updated Cart
+        │
+        ▼
+UI updates (single source of truth)
+```
+
+---
+
+### Cart Expiry & Retry Flow
+
+```text
+User action (add/update/remove)
+        │
+        ▼
+API call
+        │
+        ▼
+❌ "Cart not found or expired"
+        │
+        ▼
+Frontend:
+  • clear stale cartId
+  • create new session
+  • retry request (once)
+        │
+        ▼
+✅ Success
+        │
+        ▼
+UI updates with new cart
+```
+
+---
+
+### Data Normalization Flow
+
+```text
+Backend Response (varied shapes)
+        │
+        ▼
+api.ts (mapCart / mapCartItem)
+        │
+        ▼
+Normalized Model
+
+Cart {
+  cartId
+  items[]
+  subtotal
+  discountTotal
+  total
+}
+
+CartItem {
+  productName
+  description
+  quantity
+  unitPrice
+  lineTotal
+}
+        │
+        ▼
+UI Rendering (simple & predictable)
+```
