@@ -142,7 +142,7 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export async function createSession(): Promise<Cart> {
-    const response = await fetch(`${API_BASE_URL}/cart/sessions`, {
+    const response = await fetch(`${API_BASE_URL}/sessions`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

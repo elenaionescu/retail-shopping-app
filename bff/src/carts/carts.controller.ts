@@ -6,6 +6,11 @@ import { AddCartItemDto, UpdateCartItemDto } from './dto';
 export class CartsController {
   constructor(private readonly cartsService: CartsService) {}
 
+  @Get('ping')
+  ping() {
+    return { ok: true };
+  }
+
   @Post('sessions')
   createSession() {
     return { cart: this.cartsService.createCart() };
