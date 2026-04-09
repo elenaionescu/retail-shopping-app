@@ -11,6 +11,8 @@ import {
 import {
     addCartItem,
     Cart,
+    checkoutCart,
+    CheckoutSummary,
     createSession,
     getCart,
     getProducts,
@@ -28,6 +30,9 @@ export default function App() {
     const [selectedQuantity, setSelectedQuantity] = useState(1);
     const [cartId, setCartId] = useState<string | null>(null);
     const [cart, setCart] = useState<Cart | null>(null);
+    const [checkoutSummary, setCheckoutSummary] = useState<CheckoutSummary | null>(null);
+    const [checkoutBusy, setCheckoutBusy] = useState(false);
+    const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
     const [loadingProducts, setLoadingProducts] = useState(true);
     const [productError, setProductError] = useState<string | null>(null);
@@ -159,6 +164,32 @@ export default function App() {
             setCartError(err instanceof Error ? err.message : 'Failed to add item to cart');
         } finally {
             setCartBusy(false);
+        }
+    }
+
+    async function handleCheckout() {
+        if (!cartId) {
+            setCheckoutError('No active cart to checkout');
+            return;
+        }
+
+        try {
+            setCheckoutBusy(true);
+            setCheckoutError(null);
+
+            const summary = await checkoutCart(cartId);
+            setCheckoutSummary(summary);
+
+            // clear local cart because checkout completed
+            setCart(null);
+            setCartId(null);
+
+            setScreen('checkout');
+        } catch (err) {
+            setCheckoutError(err instanceof Error ? err.message : 'Checkout failed');
+            setScreen('checkout');
+        } finally {
+            setCheckoutBusy(false);
         }
     }
 
@@ -353,8 +384,10 @@ export default function App() {
                             <Text style={styles.summaryLine}>Discounts: -£{cart.discountTotal.toFixed(2)}</Text>
                             <Text style={styles.summaryTotal}>Total: £{cart.total.toFixed(2)}</Text>
 
-                            <Pressable style={styles.button} onPress={() => setScreen('checkout')}>
-                                <Text style={styles.buttonText}>Proceed to Checkout</Text>
+                            <Pressable style={styles.button} onPress={() => void handleCheckout()}>
+                                <Text style={styles.buttonText}>
+                                    {checkoutBusy ? 'Processing...' : 'Proceed to Checkout'}
+                                </Text>
                             </Pressable>
                         </View>
                     </>
@@ -366,13 +399,74 @@ export default function App() {
     if (screen === 'checkout') {
         return (
             <SafeAreaView style={styles.container}>
-                <View style={styles.centered}>
+                <View style={styles.header}>
                     <Text style={styles.title}>Checkout</Text>
-                    <Text style={styles.subtitle}>Next step: wire POST /cart/:cartId/checkout</Text>
-                    <Pressable style={styles.button} onPress={() => setScreen('cart')}>
-                        <Text style={styles.buttonText}>Back to Cart</Text>
-                    </Pressable>
                 </View>
+
+                {checkoutBusy ? (
+                    <View style={styles.centered}>
+                        <ActivityIndicator size="large" />
+                        <Text style={styles.subtitle}>Processing checkout...</Text>
+                    </View>
+                ) : checkoutError ? (
+                    <View style={styles.centered}>
+                        <Text style={styles.errorTitle}>Checkout failed</Text>
+                        <Text style={styles.errorText}>{checkoutError}</Text>
+                        <Pressable style={styles.button} onPress={() => setScreen('cart')}>
+                            <Text style={styles.buttonText}>Back to Cart</Text>
+                        </Pressable>
+                    </View>
+                ) : checkoutSummary ? (
+                    <View style={styles.detailContainer}>
+                        <Text style={styles.subtitle}>
+                            {checkoutSummary.message ?? 'Order completed successfully'}
+                        </Text>
+
+                        <FlatList
+                            data={checkoutSummary.items}
+                            keyExtractor={(item) => item.productId}
+                            contentContainerStyle={styles.listContent}
+                            renderItem={({ item }) => (
+                                <View style={styles.card}>
+                                    <Text style={styles.productName}>{item.productName}</Text>
+                                    <Text style={styles.stock}>Qty: {item.quantity}</Text>
+                                    <Text style={styles.price}>£{item.unitPrice.toFixed(2)}</Text>
+                                    <Text style={styles.stock}>Line total: £{item.lineTotal.toFixed(2)}</Text>
+                                </View>
+                            )}
+                        />
+
+                        <View style={styles.summaryBox}>
+                            <Text style={styles.summaryLine}>
+                                Subtotal: £{checkoutSummary.subtotal.toFixed(2)}
+                            </Text>
+                            <Text style={styles.summaryLine}>
+                                Discounts: -£{checkoutSummary.discountTotal.toFixed(2)}
+                            </Text>
+                            <Text style={styles.summaryTotal}>
+                                Total: £{checkoutSummary.total.toFixed(2)}
+                            </Text>
+
+                            <Pressable
+                                style={styles.button}
+                                onPress={() => {
+                                    setCheckoutSummary(null);
+                                    setCheckoutError(null);
+                                    setScreen('products');
+                                }}
+                            >
+                                <Text style={styles.buttonText}>Continue Shopping</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                ) : (
+                    <View style={styles.centered}>
+                        <Text style={styles.subtitle}>No checkout result available</Text>
+                        <Pressable style={styles.button} onPress={() => setScreen('products')}>
+                            <Text style={styles.buttonText}>Back to Products</Text>
+                        </Pressable>
+                    </View>
+                )}
             </SafeAreaView>
         );
     }

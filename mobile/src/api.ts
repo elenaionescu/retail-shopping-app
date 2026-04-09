@@ -35,6 +35,25 @@ export type Cart = {
     appliedDiscounts?: AppliedDiscount[];
 };
 
+export type CheckoutItem = {
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+};
+
+export type CheckoutSummary = {
+    orderId?: string;
+    cartId?: string;
+    items: CheckoutItem[];
+    subtotal: number;
+    discountTotal: number;
+    total: number;
+    appliedDiscounts?: AppliedDiscount[];
+    message?: string;
+};
+
 function mapProduct(item: any): Product {
     return {
         id: String(item?.id ?? ''),
@@ -247,4 +266,56 @@ async function safeErrorMessage(response: Response): Promise<string> {
     } catch {
         return `Request failed (${response.status})`;
     }
+}
+
+function mapCheckoutSummary(rawInput: any): CheckoutSummary {
+    const raw = rawInput?.order ?? rawInput?.summary ?? rawInput;
+
+    const items = Array.isArray(raw?.items)
+        ? raw.items.map((item: any) => ({
+            productId: String(item?.productId ?? item?.product?.id ?? ''),
+            productName:
+                item?.productName ??
+                item?.product?.name ??
+                'Unnamed product',
+            quantity: Number(item?.quantity ?? 0),
+            unitPrice: Number(item?.unitPrice ?? item?.price ?? item?.product?.price ?? 0),
+            lineTotal: Number(
+                item?.lineTotal ??
+                item?.total ??
+                Number(item?.quantity ?? 0) *
+                Number(item?.unitPrice ?? item?.price ?? item?.product?.price ?? 0),
+            ),
+        }))
+        : [];
+
+    return {
+        orderId: raw?.orderId ? String(raw.orderId) : undefined,
+        cartId: raw?.cartId ? String(raw.cartId) : undefined,
+        items,
+        subtotal: Number(raw?.subtotal ?? 0),
+        discountTotal: Number(raw?.discountTotal ?? 0),
+        total: Number(raw?.total ?? 0),
+        appliedDiscounts: Array.isArray(raw?.appliedDiscounts)
+            ? raw.appliedDiscounts.map(mapAppliedDiscount)
+            : [],
+        message: rawInput?.message ?? raw?.message,
+    };
+}
+
+export async function checkoutCart(cartId: string): Promise<CheckoutSummary> {
+    const response = await fetch(`${API_BASE_URL}/cart/${cartId}/checkout`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const message = await safeErrorMessage(response);
+        throw new Error(message || 'Checkout failed');
+    }
+
+    const data = await response.json();
+    return mapCheckoutSummary(data);
 }
