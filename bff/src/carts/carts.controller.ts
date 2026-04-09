@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/commo
 import { CartsService } from './carts.service';
 import { AddCartItemDto, UpdateCartItemDto } from './dto';
 
-@Controller('api')
+@Controller('cart')
 export class CartsController {
   constructor(private readonly cartsService: CartsService) {}
 
@@ -11,31 +11,31 @@ export class CartsController {
     return { cart: this.cartsService.createCart() };
   }
 
-  @Get('cart/:cartId')
+  @Get(':cartId')
   getCart(@Param('cartId') cartId: string) {
     return { cart: this.cartsService.getCart(cartId) };
   }
 
-  @Post('cart/:cartId/items')
+  @Post(':cartId/items')
   addItem(@Param('cartId') cartId: string, @Body() dto: AddCartItemDto) {
     return { cart: this.cartsService.addItem(cartId, dto.productId, dto.quantity) };
   }
 
-  @Patch('cart/:cartId/items/:productId')
+  @Patch(':cartId/items/:productId')
   updateItem(
-    @Param('cartId') cartId: string,
-    @Param('productId') productId: string,
-    @Body() dto: UpdateCartItemDto,
+      @Param('cartId') cartId: string,
+      @Param('productId') productId: string,
+      @Body() dto: UpdateCartItemDto,
   ) {
     return { cart: this.cartsService.updateItem(cartId, productId, dto.quantity) };
   }
 
-  @Delete('cart/:cartId/items/:productId')
+  @Delete(':cartId/items/:productId')
   removeItem(@Param('cartId') cartId: string, @Param('productId') productId: string) {
     return { cart: this.cartsService.removeItem(cartId, productId) };
   }
 
-  @Post('cart/:cartId/checkout')
+  @Post(':cartId/checkout')
   checkout(@Param('cartId') cartId: string) {
     return this.cartsService.checkout(cartId);
   }

@@ -122,7 +122,7 @@ function mapCart(rawInput: any): Cart {
 }
 
 export async function getProducts(): Promise<Product[]> {
-    const response = await fetch(`${API_BASE_URL}/api/catalog/products`);
+    const response = await fetch(`${API_BASE_URL}/catalog/products`);
 
     if (!response.ok) {
         throw new Error(`Failed to load products (${response.status})`);

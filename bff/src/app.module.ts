@@ -3,13 +3,12 @@ import { CatalogController } from './catalog/catalog.controller';
 import { CatalogService } from './catalog/catalog.service';
 import { DiscountsController } from './discounts/discounts.controller';
 import { DiscountsService } from './discounts/discounts.service';
-import { CartsController } from './carts/carts.controller';
-import { CartsService } from './carts/carts.service';
 import { HealthController } from './health.controller';
+import { CartsModule } from './carts/carts.module';
 
 @Module({
-  imports: [],
-  controllers: [HealthController, CatalogController, DiscountsController, CartsController],
-  providers: [CatalogService, DiscountsService, CartsService],
+  imports: [CartsModule],
+  controllers: [HealthController, CatalogController, DiscountsController],
+  providers: [CatalogService, DiscountsService],
 })
 export class AppModule {}
